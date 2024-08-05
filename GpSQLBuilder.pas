@@ -149,7 +149,6 @@ type
   IGpSQLBuilderCase = interface ['{1E379718-0959-455A-80AA-63BDA7C92F8C}']
     function  GetAsString: string;
     function  GetCase: IGpSQLCase;
-  //
     function  &And(const expression: array of const): IGpSQLBuilderCase; overload;
     function  &And(const expression: string): IGpSQLBuilderCase; overload;
     function  &And(const expression: IGpSQLBuilderExpression): IGpSQLBuilderCase; overload;
@@ -218,9 +217,14 @@ type
     function Select(const caseExpr: IGpSQLBuilderCase): IGpSQLBuilder; overload;
     function &Set(const colName, colValue: string): IGpSQLBuilder; overload;
     function &Set(const colName: string; const colValue: array of const): IGpSQLBuilder; overload;
+    function &SetParam(const colName, colValue: string): IGpSQLBuilder; overload;
+    /// This will create param name the same as column name
+    function &SetParam(const colName: string): IGpSQLBuilder; overload;
     function Skip(num: integer): IGpSQLBuilder;
     function Update(const tableName: string): IGpSQLBuilder;
     function Where(const expression: string = ''): IGpSQLBuilder; overload;
+    function WhereEqualParam(const colName, colValue: string): IGpSQLBuilder; overload;
+    function WhereEqualParam(const colName: String): IGpSQLBuilder; overload;
     function Where(const expression: array of const): IGpSQLBuilder; overload;
     function Where(const expression: IGpSQLBuilderExpression): IGpSQLBuilder; overload;
     property AsString: string read GetAsString;
@@ -327,6 +331,8 @@ type
     FASTSection   : IGpSQLSection;
     FASTName      : IGpSQLName;
     FTableNames   : IGpSQLNames;
+//    FEnableAutoQuote : Boolean;
+
   strict protected
     function  AutoQuote(const s: string): string;
     procedure AssertHaveName;
@@ -383,11 +389,17 @@ type
     function  Select(const caseExpr: IGpSQLBuilderCase): IGpSQLBuilder; overload;
     function  &Set(const colName, colValue: string): IGpSQLBuilder; overload;
     function  &Set(const colName: string; const colValue: array of const): IGpSQLBuilder; overload;
+    /// Value akan dirubah menjadi sql param ( : )
+    function &SetParam(const colName, colValue: string): IGpSQLBuilder; overload;
+    /// Value akan dirubah menjadi sql param ( : )
+    function &SetParam(const colName: string): IGpSQLBuilder; overload;
     function  Skip(num: integer): IGpSQLBuilder;
     function  Update(const tableName: string): IGpSQLBuilder;
     function  Where(const expression: string = ''): IGpSQLBuilder; overload;
     function  Where(const expression: array of const): IGpSQLBuilder; overload;
     function  Where(const expression: IGpSQLBuilderExpression): IGpSQLBuilder; overload;
+    function WhereEqualParam(const colName, colValue: string): IGpSQLBuilder; overload;
+    function WhereEqualParam(const colName: String): IGpSQLBuilder; overload;
     property AsString: string read GetAsString;
     property AST: IGpSQLAST read GetAST;
   end; { TGpSQLBuilder }
@@ -679,6 +691,7 @@ constructor TGpSQLBuilder.Create;
 begin
   inherited;
   FAST := CreateSQLAST;
+//  FEnableAutoQuote := False;
 end; { TGpSQLBuilder.Create }
 
 function TGpSQLBuilder.All: IGpSQLBuilder;
@@ -729,7 +742,16 @@ begin
   if (s <> '') and (s[1] = '''') and (s[Length(s)] = '''') then
     Result := s
   else
+  begin
     Result := '''' + s + '''';
+//    if FEnableAutoQuote then
+//    begin
+//      Result := '''' + s + '''';
+//    end else
+//    begin
+//      Result := s;
+//    end;
+  end;
 end; { TGpSQLBuilder.AutoQuote }
 
 function TGpSQLBuilder.&Case(const expression: string = ''): IGpSQLBuilderCase;
@@ -1094,6 +1116,17 @@ begin
   Result := InternalSet(colName, SqlParamsToStr(colValue));
 end; { TGpSQLBuilder }
 
+function TGpSQLBuilder.&SetParam(const colName, colValue: string):
+    IGpSQLBuilder;
+begin
+  Result := InternalSet(colName,':'+colValue);
+end; { TGpSQLBuilder }
+
+function TGpSQLBuilder.&SetParam(const colName: string): IGpSQLBuilder;
+begin
+  Result := InternalSet(colName,':'+colName);
+end; { TGpSQLBuilder }
+
 function TGpSQLBuilder.From(const expression: IGpSQLBuilderExpression): IGpSQLBuilder;
 begin
   Result := From('(' + expression.AsString + ')');
@@ -1140,7 +1173,19 @@ function TGpSQLBuilder.Where(const expression: IGpSQLBuilderExpression): IGpSQLB
 begin
   SelectSection(secWhere);
   Result := &And(expression);
-end; { TGpSQLBuilder.Where }
+end;
+
+function TGpSQLBuilder.WhereEqualParam(const colName: String): IGpSQLBuilder;
+begin
+  Result := Where(colName +'='+':'+colName);
+end;
+
+function TGpSQLBuilder.WhereEqualParam(const colName, colValue: string): IGpSQLBuilder;
+begin
+  Result := Where(colName +'='+':'+colValue);
+end;
+
+{ TGpSQLBuilder.Where }
 
 { SQL }
 
