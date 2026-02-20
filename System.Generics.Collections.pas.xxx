@@ -6,8 +6,8 @@ unit System.Generics.Collections;
 
 interface
 
-uses
-  fgl;
+//uses
+//  fgl;
 
 type
   TList<T> = class(TFPGList<T>) end;
